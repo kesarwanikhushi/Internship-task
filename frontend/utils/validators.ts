@@ -29,7 +29,8 @@ export function validatePassword(password: string): {
 }
 
 export function validateName(name: string): boolean {
-  return name && name.trim().length >= 3 && name.trim().length <= 50;
+  const trimmed = typeof name === 'string' ? name.trim() : '';
+  return trimmed.length >= 3 && trimmed.length <= 50;
 }
 
 export function validateTaskTitle(title: string): boolean {
