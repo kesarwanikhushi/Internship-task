@@ -31,7 +31,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const checkAuth = async () => {
     try {
       if (authService.isAuthenticated()) {
-        const userData = await authService.getCurrentUser();
+        const userData = await authService.getCurrentUser() as User;
         setUser(userData);
       }
     } catch (error) {

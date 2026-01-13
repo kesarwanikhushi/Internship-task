@@ -20,6 +20,17 @@ export interface AuthResponse {
   };
 }
 
+export interface UserResponse {
+  success: boolean;
+  user: {
+    id: string;
+    username: string;
+    email: string;
+    bio?: string;
+    avatar?: string;
+  };
+}
+
 export const authService = {
   async login(credentials: LoginCredentials): Promise<AuthResponse> {
     const response = await apiService.post<AuthResponse>('/auth/login', credentials);
@@ -41,8 +52,9 @@ export const authService = {
     localStorage.removeItem('token');
   },
 
-  async getCurrentUser() {
-    return apiService.get('/auth/me');
+  async getCurrentUser(): Promise<{ id: string; username: string; email: string }> {
+    const response = await apiService.get<UserResponse>('/auth/me');
+    return response.user;
   },
 
   isAuthenticated(): boolean {
