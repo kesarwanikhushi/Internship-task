@@ -28,8 +28,8 @@ export function validatePassword(password: string): {
   };
 }
 
-export function validateUsername(username: string): boolean {
-  return username.length >= 3 && username.length <= 20;
+export function validateName(name: string): boolean {
+  return name && name.trim().length >= 3 && name.trim().length <= 50;
 }
 
 export function validateTaskTitle(title: string): boolean {

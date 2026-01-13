@@ -14,11 +14,11 @@ const validatePassword = (password) => {
   return { isValid: true };
 };
 
-const validateUsername = (username) => {
-  if (username.length < 3 || username.length > 20) {
+const validateName = (name) => {
+  if (!name || name.trim().length < 3 || name.trim().length > 50) {
     return {
       isValid: false,
-      message: 'Username must be between 3 and 20 characters',
+      message: 'Name must be between 3 and 50 characters',
     };
   }
   return { isValid: true };
@@ -47,7 +47,7 @@ const validateTaskDescription = (description) => {
 module.exports = {
   validateEmail,
   validatePassword,
-  validateUsername,
+  validateName,
   validateTaskTitle,
   validateTaskDescription,
 };

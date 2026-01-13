@@ -2,29 +2,27 @@ const User = require('../models/User');
 const { generateToken } = require('../utils/jwt');
 const logger = require('../utils/logger');
 
-// @desc    Register a new user
-// @route   POST /api/auth/register
+// @desc    Signup a new user
+// @route   POST /api/auth/signup
 // @access  Public
-exports.register = async (req, res, next) => {
+exports.signup = async (req, res, next) => {
   try {
-    const { username, email, password } = req.body;
+    const { name, email, password } = req.body;
 
-    // Check if user already exists
-    const userExists = await User.findOne({ $or: [{ email }, { username }] });
+    // Validate required fields
+    if (!name || !email || !password) {
+      return res.status(400).json({ success: false, message: 'Name, email and password are required' });
+    }
+
+    // Check if user already exists by email
+    const userExists = await User.findOne({ email });
 
     if (userExists) {
-      return res.status(400).json({
-        success: false,
-        message: 'User already exists with this email or username',
-      });
+      return res.status(400).json({ success: false, message: 'User already exists with this email' });
     }
 
     // Create user
-    const user = await User.create({
-      username,
-      email,
-      password,
-    });
+    const user = await User.create({ name, email, password });
 
     // Generate token
     const token = generateToken(user._id);
@@ -36,12 +34,12 @@ exports.register = async (req, res, next) => {
       token,
       user: {
         id: user._id,
-        username: user.username,
+        name: user.name,
         email: user.email,
       },
     });
   } catch (error) {
-    logger.error(`Register error: ${error.message}`);
+    logger.error(`Signup error: ${error.message}`);
     next(error);
   }
 };
@@ -91,7 +89,7 @@ exports.login = async (req, res, next) => {
       token,
       user: {
         id: user._id,
-        username: user.username,
+        name: user.name,
         email: user.email,
       },
     });
@@ -112,7 +110,7 @@ exports.getMe = async (req, res, next) => {
       success: true,
       user: {
         id: user._id,
-        username: user.username,
+        name: user.name,
         email: user.email,
         bio: user.bio,
         avatar: user.avatar,

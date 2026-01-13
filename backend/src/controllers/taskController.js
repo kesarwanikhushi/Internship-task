@@ -1,5 +1,6 @@
 const Task = require('../models/Task');
 const logger = require('../utils/logger');
+const { validateTaskTitle, validateTaskDescription } = require('../utils/validator');
 
 // @desc    Get all tasks for logged in user
 // @route   GET /api/tasks
@@ -58,14 +59,17 @@ exports.createTask = async (req, res, next) => {
   try {
     const { title, description, status, priority, dueDate } = req.body;
 
-    const task = await Task.create({
-      title,
-      description,
-      status,
-      priority,
-      dueDate,
-      userId: req.user.id,
-    });
+    // Validate input
+    const titleCheck = validateTaskTitle(title);
+    if (!titleCheck.isValid) {
+      return res.status(400).json({ success: false, message: titleCheck.message });
+    }
+    const descCheck = validateTaskDescription(description);
+    if (!descCheck.isValid) {
+      return res.status(400).json({ success: false, message: descCheck.message });
+    }
+
+    const task = await Task.create({ title, description, status, priority, dueDate, userId: req.user.id });
 
     logger.info(`Task created: ${task._id} by user: ${req.user.id}`);
 

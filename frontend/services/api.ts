@@ -13,29 +13,32 @@ class ApiService {
       },
     });
 
-    // Request interceptor to add token
-    this.client.interceptors.request.use(
-      (config) => {
-        const token = localStorage.getItem('token');
-        if (token) {
-          config.headers.Authorization = `Bearer ${token}`;
-        }
-        return config;
-      },
-      (error) => Promise.reject(error)
-    );
+    // Only add browser-specific interceptors when running in the client
+    if (typeof window !== 'undefined') {
+      // Request interceptor to add token
+      this.client.interceptors.request.use(
+        (config) => {
+          const token = localStorage.getItem('token');
+          if (token && config.headers) {
+            (config.headers as any).Authorization = `Bearer ${token}`;
+          }
+          return config;
+        },
+        (error) => Promise.reject(error)
+      );
 
-    // Response interceptor for error handling
-    this.client.interceptors.response.use(
-      (response) => response,
-      (error) => {
-        if (error.response?.status === 401) {
-          localStorage.removeItem('token');
-          window.location.href = '/login';
+      // Response interceptor for error handling
+      this.client.interceptors.response.use(
+        (response) => response,
+        (error) => {
+          if (error.response?.status === 401) {
+            localStorage.removeItem('token');
+            window.location.href = '/login';
+          }
+          return Promise.reject(error);
         }
-        return Promise.reject(error);
-      }
-    );
+      );
+    }
   }
 
   async get<T>(url: string): Promise<T> {

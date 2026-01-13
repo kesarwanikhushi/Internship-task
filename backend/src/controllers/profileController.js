@@ -18,13 +18,13 @@ exports.getProfile = async (req, res, next) => {
     res.status(200).json({
       success: true,
       profile: {
-        id: user._id,
-        username: user.username,
-        email: user.email,
-        bio: user.bio,
-        avatar: user.avatar,
-        createdAt: user.createdAt,
-      },
+          id: user._id,
+          name: user.name,
+          email: user.email,
+          bio: user.bio,
+          avatar: user.avatar,
+          createdAt: user.createdAt,
+        },
     });
   } catch (error) {
     logger.error(`Get profile error: ${error.message}`);
@@ -37,7 +37,7 @@ exports.getProfile = async (req, res, next) => {
 // @access  Private
 exports.updateProfile = async (req, res, next) => {
   try {
-    const { username, bio, avatar } = req.body;
+    const { name, bio, avatar } = req.body;
 
     const user = await User.findById(req.user.id);
 
@@ -49,7 +49,7 @@ exports.updateProfile = async (req, res, next) => {
     }
 
     // Update fields
-    if (username) user.username = username;
+    if (name) user.name = name;
     if (bio !== undefined) user.bio = bio;
     if (avatar !== undefined) user.avatar = avatar;
 
@@ -61,7 +61,7 @@ exports.updateProfile = async (req, res, next) => {
       success: true,
       profile: {
         id: user._id,
-        username: user.username,
+        name: user.name,
         email: user.email,
         bio: user.bio,
         avatar: user.avatar,

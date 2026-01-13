@@ -6,7 +6,7 @@ export interface LoginCredentials {
 }
 
 export interface SignupCredentials {
-  username: string;
+  name: string;
   email: string;
   password: string;
 }
@@ -15,7 +15,7 @@ export interface AuthResponse {
   token: string;
   user: {
     id: string;
-    username: string;
+    name: string;
     email: string;
   };
 }
@@ -24,7 +24,7 @@ export interface UserResponse {
   success: boolean;
   user: {
     id: string;
-    username: string;
+    name: string;
     email: string;
     bio?: string;
     avatar?: string;
@@ -41,7 +41,7 @@ export const authService = {
   },
 
   async signup(credentials: SignupCredentials): Promise<AuthResponse> {
-    const response = await apiService.post<AuthResponse>('/auth/register', credentials);
+    const response = await apiService.post<AuthResponse>('/auth/signup', credentials);
     if (response.token) {
       localStorage.setItem('token', response.token);
     }
@@ -52,7 +52,7 @@ export const authService = {
     localStorage.removeItem('token');
   },
 
-  async getCurrentUser(): Promise<{ id: string; username: string; email: string }> {
+  async getCurrentUser(): Promise<{ id: string; name: string; email: string }> {
     const response = await apiService.get<UserResponse>('/auth/me');
     return response.user;
   },

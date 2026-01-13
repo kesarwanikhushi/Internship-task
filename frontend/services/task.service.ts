@@ -4,7 +4,7 @@ export interface Task {
   _id: string;
   title: string;
   description: string;
-  status: 'pending' | 'in-progress' | 'completed';
+  status: 'pending' | 'completed';
   priority: 'low' | 'medium' | 'high';
   dueDate?: string;
   createdAt: string;
@@ -14,7 +14,7 @@ export interface Task {
 export interface CreateTaskData {
   title: string;
   description: string;
-  status?: 'pending' | 'in-progress' | 'completed';
+  status?: 'pending' | 'completed';
   priority?: 'low' | 'medium' | 'high';
   dueDate?: string;
 }
