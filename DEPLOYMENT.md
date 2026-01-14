@@ -124,3 +124,32 @@ npm run dev
 Make sure your local `.env` files are properly configured:
 - `backend/.env` - MongoDB URI and JWT secret
 - `frontend/.env` - API URL pointing to `http://localhost:5000`
+
+## Deploying Backend to Render
+
+If you prefer Render instead of Vercel, follow these steps to deploy the backend as a long-running web service:
+
+1. **Push code to GitHub** (if not already done)
+
+2. **Create a New Web Service on Render**
+   - Go to https://render.com and click "New" → "Web Service"
+   - Connect your repository and select the `backend` folder as the Root Directory
+   - Environment: `Node`
+   - Build Command: leave empty (or `npm install`)
+   - Start Command: `npm start` (or `node server.js`)
+
+3. **Set Environment Variables** in Render Dashboard
+   - `MONGODB_URI` = your MongoDB connection string
+   - `JWT_SECRET` = your JWT secret
+   - `NODE_ENV` = production
+
+4. **Optional**: Add a `Procfile` in the `backend` folder with:
+   ```
+   web: node server.js
+   ```
+
+5. **Deploy** and wait for the service to become healthy.
+
+6. **Update Frontend**: set `VITE_API_URL` to the Render service URL (for example `https://your-backend.onrender.com`) and redeploy the frontend.
+
+Render will run your app as a standard Express server listening on `process.env.PORT`, so removing the serverless wrapper and Vercel config (which this repo now does) is required.
