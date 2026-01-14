@@ -6,10 +6,14 @@ const connectDB = async () => {
       // already connected
       return;
     }
+    if (!process.env.MONGODB_URI) {
+      throw new Error('MONGODB_URI is not set. Set process.env.MONGODB_URI to your MongoDB connection string');
+    }
 
     await mongoose.connect(process.env.MONGODB_URI, {
       useNewUrlParser: true,
-      useUnifiedTopology: true
+      useUnifiedTopology: true,
+      serverSelectionTimeoutMS: 5000
     });
     console.log('MongoDB connected');
   } catch (error) {

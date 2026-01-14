@@ -8,7 +8,7 @@ function KanbanBoard({ tasks, onEdit, onDelete }) {
 
   const handleDelete = async (taskId) => {
     try {
-      await api.delete(`/tasks/${taskId}`)
+      await api.delete(`/api/tasks/${taskId}`)
       onDelete()
     } catch (error) {
       console.error('Failed to delete task:', error)

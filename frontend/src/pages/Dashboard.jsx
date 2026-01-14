@@ -29,7 +29,7 @@ function Dashboard() {
 
   const fetchTasks = async () => {
     try {
-      const response = await api.get('/tasks')
+      const response = await api.get('/api/tasks')
       setTasks(response.data)
     } catch (error) {
       console.error('Failed to fetch tasks:', error)

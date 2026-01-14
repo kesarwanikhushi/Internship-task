@@ -32,7 +32,7 @@ function ProfileDropdown() {
     setSuccess('')
 
     try {
-      const response = await api.put('/users/profile', { name, email })
+      const response = await api.put('/api/users/profile', { name, email })
       setUser(response.data)
       setSuccess('Profile updated')
       setTimeout(() => {

@@ -4,7 +4,7 @@ function TaskList({ tasks, onEdit, onDelete }) {
   const handleDelete = async (id) => {
     if (window.confirm('Are you sure you want to delete this task?')) {
       try {
-        await api.delete(`/tasks/${id}`)
+        await api.delete(`/api/tasks/${id}`)
         onDelete()
       } catch (error) {
         console.error('Failed to delete task:', error)
@@ -14,7 +14,7 @@ function TaskList({ tasks, onEdit, onDelete }) {
 
   const handleMarkComplete = async (task) => {
     try {
-      await api.put(`/tasks/${task._id}`, { ...task, status: 'completed' })
+      await api.put(`/api/tasks/${task._id}`, { ...task, status: 'completed' })
       onDelete()
     } catch (error) {
       console.error('Failed to update task:', error)

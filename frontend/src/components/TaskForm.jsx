@@ -36,9 +36,9 @@ function TaskForm({ task, onClose, onSave }) {
       }
 
       if (task) {
-        await api.put(`/tasks/${task._id}`, taskData)
+        await api.put(`/api/tasks/${task._id}`, taskData)
       } else {
-        await api.post('/tasks', taskData)
+        await api.post('/api/tasks', taskData)
       }
       onSave()
     } catch (err) {
