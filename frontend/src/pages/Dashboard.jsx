@@ -1,8 +1,8 @@
 import { useContext, useEffect, useState } from 'react'
 import { Navigate } from 'react-router-dom'
 import { AuthContext } from '../context/AuthContext'
-import Profile from '../components/Profile'
-import TaskList from '../components/TaskList'
+import ProfileDropdown from '../components/ProfileDropdown'
+import CalendarGrid from '../components/CalendarGrid'
 import TaskForm from '../components/TaskForm'
 import api from '../services/api'
 
@@ -80,65 +80,61 @@ function Dashboard() {
   }
 
   return (
-    <div className="min-h-screen bg-slate-50">
-      <nav className="bg-white border-b border-slate-200">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex justify-between items-center">
-          <h1 className="text-2xl font-bold text-slate-800">Task Manager</h1>
-          <button
-            onClick={logout}
-            className="bg-slate-100 text-slate-700 px-5 py-2 rounded-lg font-medium hover:bg-slate-200"
-          >
-            Logout
-          </button>
+    <div className="min-h-screen" style={{
+      background: '#f8fafc',
+      backgroundImage: `
+        linear-gradient(to right, #cbd5e1 1px, transparent 1px),
+        linear-gradient(to bottom, #cbd5e1 1px, transparent 1px)
+      `,
+      backgroundSize: '48px 48px'
+    }}>
+      <nav className="bg-white border-b border-slate-300 h-16 sticky top-0 z-40">
+        <div className="h-full max-w-7xl mx-auto px-8 flex items-center justify-between">
+          <div className="flex items-center gap-4">
+            <div className="w-8 h-8 bg-slate-900 rounded-lg"></div>
+            <h1 className="text-xl font-bold text-slate-900">Task Manager</h1>
+          </div>
+          <ProfileDropdown />
         </div>
       </nav>
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
-          <div className="lg:col-span-1">
-            <Profile />
-          </div>
+      <div className="max-w-7xl mx-auto px-8 py-10">
+        <div className="mb-8">
+          <h2 className="text-4xl font-bold text-slate-900 mb-2">Calendar</h2>
+          <p className="text-slate-500">View and manage your tasks by date</p>
+        </div>
 
-          <div className="lg:col-span-3">
-            <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6">
-              <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4">
-                <h2 className="text-2xl font-bold text-slate-800">My Tasks</h2>
-                <button
-                  onClick={handleCreateTask}
-                  className="bg-slate-800 text-white px-5 py-2.5 rounded-lg font-medium hover:bg-slate-900 w-full sm:w-auto"
-                >
-                  Add New Task
-                </button>
-              </div>
-
-              <div className="mb-6 grid grid-cols-1 md:grid-cols-2 gap-4">
-                <input
-                  type="text"
-                  placeholder="Search tasks..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="px-4 py-2.5 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-slate-300"
-                />
-                <select
-                  value={statusFilter}
-                  onChange={(e) => setStatusFilter(e.target.value)}
-                  className="px-4 py-2.5 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-slate-300"
-                >
-                  <option value="">All Status</option>
-                  <option value="pending">Pending</option>
-                  <option value="in-progress">In Progress</option>
-                  <option value="completed">Completed</option>
-                </select>
-              </div>
-
-              <TaskList
-                tasks={filteredTasks}
-                onEdit={handleEditTask}
-                onDelete={fetchTasks}
+        <div className="bg-white/80 backdrop-blur-sm rounded-2xl border border-slate-300 shadow-sm p-6 mb-6">
+          <div className="flex flex-col sm:flex-row gap-3">
+            <div className="flex-1 min-w-0">
+              <input
+                type="text"
+                placeholder="Search tasks..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="w-full h-11 px-4 bg-slate-50 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-slate-900 focus:border-transparent"
               />
+            </div>
+            <div className="sm:w-48">
+              <select
+                value={statusFilter}
+                onChange={(e) => setStatusFilter(e.target.value)}
+                className="w-full h-11 px-4 bg-slate-50 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-slate-900 focus:border-transparent appearance-none"
+              >
+                <option value="">All Status</option>
+                <option value="pending">Pending</option>
+                <option value="in-progress">In Progress</option>
+                <option value="completed">Completed</option>
+              </select>
             </div>
           </div>
         </div>
+
+        <CalendarGrid
+          tasks={filteredTasks}
+          onEventClick={handleEditTask}
+          onAddTask={handleCreateTask}
+        />
       </div>
 
       {showTaskForm && (

@@ -26,7 +26,7 @@ exports.getTasks = async (req, res) => {
 
 exports.createTask = async (req, res) => {
   try {
-    const { title, description, status } = req.body;
+    const { title, description, status, dueDate } = req.body;
 
     if (!title || !description) {
       return res.status(400).json({ message: 'Title and description are required' });
@@ -36,6 +36,7 @@ exports.createTask = async (req, res) => {
       title,
       description,
       status: status || 'pending',
+      dueDate,
       user: req.userId
     });
 
@@ -48,7 +49,7 @@ exports.createTask = async (req, res) => {
 
 exports.updateTask = async (req, res) => {
   try {
-    const { title, description, status } = req.body;
+    const { title, description, status, dueDate } = req.body;
 
     const task = await Task.findOne({ _id: req.params.id, user: req.userId });
 
@@ -59,6 +60,7 @@ exports.updateTask = async (req, res) => {
     if (title) task.title = title;
     if (description) task.description = description;
     if (status) task.status = status;
+    if (dueDate !== undefined) task.dueDate = dueDate;
 
     await task.save();
     res.json(task);
