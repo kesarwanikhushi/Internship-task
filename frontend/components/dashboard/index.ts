@@ -1,2 +1,0 @@
-// Dashboard Components Directory
-export {};

@@ -1,2 +1,0 @@
-// Auth Components Directory
-export {};
