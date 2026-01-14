@@ -10,7 +10,12 @@ dotenv.config();
 
 const app = express();
 
-connectDB();
+// Attempt to connect to the database. On serverless platforms we log errors
+// instead of exiting the process so the function can return an error response
+// and logs are preserved.
+connectDB().catch((err) => {
+  console.error('Initial MongoDB connection failed:', err.message);
+});
 
 app.use(cors());
 app.use(express.json());
