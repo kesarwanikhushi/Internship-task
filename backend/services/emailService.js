@@ -1,6 +1,7 @@
 const nodemailer = require('nodemailer');
 
 // Create transporter
+let sgMail;
 const createTransporter = () => {
   // For production, use a real email service (Gmail, SendGrid, etc.)
   // This example uses Gmail - you need to enable "App Passwords" in your Google account
@@ -40,6 +41,15 @@ const createTransporter = () => {
 
 // Send OTP email
 exports.sendOTPEmail = async (email, otp, name) => {
+  if (process.env.SENDGRID_API_KEY) {
+    try {
+      sgMail = require('@sendgrid/mail');
+      sgMail.setApiKey(process.env.SENDGRID_API_KEY);
+    } catch (e) {
+      console.warn('SendGrid package not installed; falling back to SMTP');
+      sgMail = null;
+    }
+  }
   try {
     const transporter = createTransporter();
     
@@ -96,6 +106,19 @@ exports.sendOTPEmail = async (email, otp, name) => {
       console.log('Preview URL: %s', nodemailer.getTestMessageUrl(info));
     }
     
+    // If SendGrid is configured and available, use it (more reliable on hosted platforms)
+    if (sgMail) {
+      const msg = {
+        to: email,
+        from: process.env.EMAIL_FROM || 'noreply@taskmanager.com',
+        subject: mailOptions.subject,
+        text: mailOptions.text,
+        html: mailOptions.html
+      };
+      const res = await sgMail.send(msg);
+      return { success: true, provider: 'sendgrid', result: res };
+    }
+
     return { success: true, messageId: info.messageId };
   } catch (error) {
     console.error('Email sending failed:', error);
@@ -123,6 +146,18 @@ exports.sendPasswordResetEmail = async (email, resetToken, name) => {
       text: `Hello ${name}!\n\nYou requested to reset your password. Use this link: ${resetURL}\n\nThis link will expire in 1 hour.`
     };
     
+    if (sgMail) {
+      const msg = {
+        to: email,
+        from: process.env.EMAIL_FROM || 'noreply@taskmanager.com',
+        subject: mailOptions.subject,
+        text: mailOptions.text,
+        html: mailOptions.html
+      };
+      await sgMail.send(msg);
+      return { success: true, provider: 'sendgrid' };
+    }
+
     await transporter.sendMail(mailOptions);
     return { success: true };
   } catch (error) {
