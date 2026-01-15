@@ -1,8 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import axios from 'axios';
 import { Link, useNavigate } from 'react-router-dom';
-
-const API_BASE = import.meta.env.VITE_API_BASE || 'https://internship-task-0jlj.onrender.com/api';
+import api from '../services/api';
 
 export default function RegisterWithOTP() {
   const [step, setStep] = useState('register');
@@ -22,13 +20,14 @@ export default function RegisterWithOTP() {
     setError('');
     setSuccess('');
     try {
-      const res = await axios.post(`${API_BASE}/auth/register`, form);
+      const res = await api.post('/api/auth/register', form);
       setUserId(res.data.userId);
       setEmail(res.data.email);
       setStep('otp');
       setSuccess(res.data.message);
     } catch (err) {
-      setError(err.response?.data?.message || 'Registration failed');
+      console.error('Registration error:', err);
+      setError(err.response?.data?.message || 'Registration failed. Please check your connection and try again.');
     } finally {
       setLoading(false);
     }
@@ -41,7 +40,7 @@ export default function RegisterWithOTP() {
     setError('');
     setSuccess('');
     try {
-      const res = await axios.post(`${API_BASE}/auth/verify-otp`, {
+      const res = await api.post('/api/auth/verify-otp', {
         email,
         otp,
       });
@@ -50,6 +49,7 @@ export default function RegisterWithOTP() {
       // redirect to login after short delay so user sees confirmation
       setTimeout(() => navigate('/login'), 2000);
     } catch (err) {
+      console.error('OTP verification error:', err);
       setError(err.response?.data?.message || 'OTP verification failed');
     } finally {
       setLoading(false);
@@ -62,9 +62,10 @@ export default function RegisterWithOTP() {
     setError('');
     setSuccess('');
     try {
-      const res = await axios.post(`${API_BASE}/auth/resend-otp`, { email });
+      const res = await api.post('/api/auth/resend-otp', { email });
       setSuccess(res.data.message || 'OTP resent!');
     } catch (err) {
+      console.error('Resend OTP error:', err);
       setError(err.response?.data?.message || 'Failed to resend OTP');
     } finally {
       setLoading(false);

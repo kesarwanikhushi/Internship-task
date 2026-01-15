@@ -13,28 +13,36 @@ const app = express();
 // For a long-running service we want to connect to the DB before starting the server.
 // If the DB connection fails on startup we exit so the host (Render) can retry/deploy accordingly.
 
-// Normalize FRONTEND_URL to avoid trailing-slash mismatch with browser origin
-const rawFrontEnd = process.env.FRONTEND_URL || 'https://internshiptask-lilac.vercel.app';
-const FRONTEND_URL = rawFrontEnd.replace(/\/$/, '');
+// Allow multiple origins for development and production
+const allowedOrigins = [
+  'http://localhost:5173',
+  'http://localhost:3000',
+  'http://127.0.0.1:5173',
+  'https://internshiptask-lilac.vercel.app',
+  process.env.FRONTEND_URL
+].filter(Boolean).map(url => url.replace(/\/$/, ''));
 
+// CORS configuration with dynamic origin
 app.use(cors({
-  origin: FRONTEND_URL,
+  origin: function (origin, callback) {
+    // Allow requests with no origin (like mobile apps, curl, postman)
+    if (!origin) return callback(null, true);
+    
+    if (allowedOrigins.indexOf(origin) !== -1) {
+      callback(null, true);
+    } else {
+      console.warn(`CORS blocked origin: ${origin}`);
+      callback(null, false);
+    }
+  },
   credentials: true,
   allowedHeaders: ['Content-Type', 'Authorization', 'Access-Control-Request-Private-Network'],
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS']
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
+  optionsSuccessStatus: 204
 }));
 
-// Allow Private Network Access preflight responses for browsers that request it
-app.options('*', (req, res) => {
-  res.header('Access-Control-Allow-Origin', FRONTEND_URL);
-  res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, Access-Control-Request-Private-Network');
-  res.header('Access-Control-Allow-Methods', 'GET,POST,PUT,DELETE,OPTIONS');
-  res.header('Access-Control-Allow-Credentials', 'true');
-  if (req.headers['access-control-request-private-network']) {
-    res.header('Access-Control-Allow-Private-Network', 'true');
-  }
-  return res.sendStatus(204);
-});
+// Explicit preflight handler for all routes
+app.options('*', cors());
 
 app.use(express.json());
 

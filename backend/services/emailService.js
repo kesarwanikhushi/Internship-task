@@ -2,53 +2,38 @@ const nodemailer = require('nodemailer');
 
 // Create transporter
 let sgMail;
-const createTransporter = () => {
-  // For production, use a real email service (Gmail, SendGrid, etc.)
-  // This example uses Gmail - you need to enable "App Passwords" in your Google account
-  
-  if (process.env.EMAIL_SERVICE === 'gmail') {
-    // Use explicit SMTP settings for Gmail with sensible timeouts to avoid hanging
-    const port = Number(process.env.EMAIL_PORT) || 465;
-    const secure = (typeof process.env.EMAIL_SECURE !== 'undefined')
-      ? process.env.EMAIL_SECURE === 'true'
-      : port === 465;
-    const requireTLS = (typeof process.env.EMAIL_REQUIRE_TLS !== 'undefined')
-      ? process.env.EMAIL_REQUIRE_TLS === 'true'
-      : port === 587;
 
+const createTransporter = () => {
+  // For production, use Gmail SMTP with App Password
+  if (process.env.EMAIL_SERVICE === 'gmail' && process.env.EMAIL_USER && process.env.EMAIL_PASSWORD) {
+    console.log('Using Gmail SMTP for email service');
+    
     return nodemailer.createTransport({
-      host: process.env.EMAIL_HOST || 'smtp.gmail.com',
-      port,
-      secure,
-      requireTLS,
+      service: 'gmail',
       auth: {
         user: process.env.EMAIL_USER,
-        pass: process.env.EMAIL_PASSWORD // Use App Password, not regular password
+        pass: process.env.EMAIL_PASSWORD // Must be App Password (16 chars), not regular password
       },
       // Timeouts to prevent indefinite waiting
-      connectionTimeout: Number(process.env.EMAIL_CONNECTION_TIMEOUT) || 10000,
-      greetingTimeout: Number(process.env.EMAIL_GREETING_TIMEOUT) || 10000,
-      socketTimeout: Number(process.env.EMAIL_SOCKET_TIMEOUT) || 10000,
-      tls: {
-        // allow self-signed certificates if explicitly disabled
-        rejectUnauthorized: process.env.EMAIL_TLS_REJECT_UNAUTHORIZED !== 'false'
-      }
+      connectionTimeout: 15000,
+      greetingTimeout: 15000,
+      socketTimeout: 15000,
+      // Enable debug for troubleshooting
+      debug: process.env.NODE_ENV === 'development',
+      logger: process.env.NODE_ENV === 'development'
     });
   }
   
-  // For development/testing, use Ethereal (fake SMTP)
-  // Emails won't be sent but you can view them at ethereal.email
+  // Fallback for development/testing
+  console.warn('Email service not properly configured. Emails will not be sent.');
   return nodemailer.createTransport({
-    host: process.env.SMTP_HOST || 'smtp.ethereal.email',
-    port: Number(process.env.SMTP_PORT) || 587,
-    secure: process.env.SMTP_SECURE === 'true' || false,
+    host: 'smtp.ethereal.email',
+    port: 587,
+    secure: false,
     auth: {
-      user: process.env.SMTP_USER,
-      pass: process.env.SMTP_PASS
-    },
-    connectionTimeout: Number(process.env.EMAIL_CONNECTION_TIMEOUT) || 10000,
-    greetingTimeout: Number(process.env.EMAIL_GREETING_TIMEOUT) || 10000,
-    socketTimeout: Number(process.env.EMAIL_SOCKET_TIMEOUT) || 10000
+      user: process.env.SMTP_USER || 'ethereal.user@ethereal.email',
+      pass: process.env.SMTP_PASS || 'ethereal.pass'
+    }
   });
 };
 

@@ -62,20 +62,22 @@ exports.register = async (req, res) => {
 
     // Send OTP email (non-blocking). We don't want a slow/failed SMTP to hang registration.
     sendOTPEmail(email, otp, name)
-      .then(() => console.log('OTP email sent'))
+      .then(() => console.log('OTP email sent successfully'))
       .catch(async (emailError) => {
         console.error('Email send failed (non-blocking):', emailError);
-        // Optionally: you could mark user for retry or notify admin.
+        // Note: We still return success to user since account was created
       });
 
-    res.status(201).json({
+    return res.status(201).json({
       message: 'Registration successful! Please check your email for the OTP.',
       email: email,
       userId: user._id
     });
   } catch (error) {
     console.error('Registration error:', error);
-    res.status(500).json({ message: error.message });
+    return res.status(500).json({ 
+      message: error.message || 'Registration failed. Please try again.' 
+    });
   }
 };
 
@@ -134,7 +136,7 @@ exports.verifyOTP = async (req, res) => {
     user.refreshToken = refreshToken;
     await user.save();
 
-    res.json({
+    return res.json({
       message: 'Email verified successfully!',
       accessToken,
       refreshToken,
@@ -146,7 +148,9 @@ exports.verifyOTP = async (req, res) => {
     });
   } catch (error) {
     console.error('OTP verification error:', error);
-    res.status(500).json({ message: error.message });
+    return res.status(500).json({ 
+      message: error.message || 'Verification failed. Please try again.' 
+    });
   }
 };
 
@@ -181,10 +185,12 @@ exports.resendOTP = async (req, res) => {
     // Send OTP email
     await sendOTPEmail(email, otp, user.name);
 
-    res.json({ message: 'OTP resent successfully!' });
+    return res.json({ message: 'OTP resent successfully!' });
   } catch (error) {
     console.error('Resend OTP error:', error);
-    res.status(500).json({ message: error.message });
+    return res.status(500).json({ 
+      message: error.message || 'Failed to resend OTP. Please try again.' 
+    });
   }
 };
 
@@ -228,7 +234,7 @@ exports.login = async (req, res) => {
     user.refreshToken = refreshToken;
     await user.save();
 
-    res.json({
+    return res.json({
       accessToken,
       refreshToken,
       user: {
@@ -239,7 +245,9 @@ exports.login = async (req, res) => {
     });
   } catch (error) {
     console.error('Login error:', error);
-    res.status(500).json({ message: error.message });
+    return res.status(500).json({ 
+      message: error.message || 'Login failed. Please try again.' 
+    });
   }
 };
 
@@ -272,10 +280,12 @@ exports.refreshToken = async (req, res) => {
       expiresIn: '15m'
     });
 
-    res.json({ accessToken });
+    return res.json({ accessToken });
   } catch (error) {
     console.error('Refresh token error:', error);
-    res.status(500).json({ message: error.message });
+    return res.status(500).json({ 
+      message: error.message || 'Token refresh failed. Please try again.' 
+    });
   }
 };
 
@@ -287,9 +297,11 @@ exports.logout = async (req, res) => {
     // Clear refresh token from database
     await User.findByIdAndUpdate(userId, { refreshToken: null });
 
-    res.json({ message: 'Logged out successfully' });
+    return res.json({ message: 'Logged out successfully' });
   } catch (error) {
     console.error('Logout error:', error);
-    res.status(500).json({ message: error.message });
+    return res.status(500).json({ 
+      message: error.message || 'Logout failed. Please try again.' 
+    });
   }
 };
