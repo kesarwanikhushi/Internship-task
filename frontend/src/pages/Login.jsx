@@ -6,21 +6,33 @@ function Login() {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
+  const [isLoading, setIsLoading] = useState(false)
   const { login } = useContext(AuthContext)
 
   const handleSubmit = async (e) => {
     e.preventDefault()
     setError('')
+    setIsLoading(true)
 
     try {
       await login(email, password)
     } catch (err) {
       setError(err.response?.data?.message || 'Login failed')
+      setIsLoading(false)
     }
   }
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-slate-50">
+      {isLoading && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50">
+          <div className="bg-white p-8 rounded-2xl shadow-xl flex flex-col items-center">
+            <div className="w-16 h-16 border-4 border-slate-200 border-t-slate-800 rounded-full animate-spin"></div>
+            <p className="mt-4 text-slate-700 font-medium">Logging in...</p>
+          </div>
+        </div>
+      )}
+      
       <div className="bg-white p-8 rounded-2xl shadow-sm border border-slate-200 w-full max-w-md">
         <h2 className="text-3xl font-bold mb-8 text-slate-800">Welcome Back</h2>
         
@@ -55,9 +67,10 @@ function Login() {
 
           <button
             type="submit"
-            className="w-full bg-slate-800 text-white py-3 rounded-lg font-medium hover:bg-slate-900"
+            disabled={isLoading}
+            className="w-full bg-slate-800 text-white py-3 rounded-lg font-medium hover:bg-slate-900 disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            Login
+            {isLoading ? 'Logging in...' : 'Login'}
           </button>
         </form>
 
