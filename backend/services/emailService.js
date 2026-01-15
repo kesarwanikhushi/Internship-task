@@ -112,13 +112,6 @@ exports.sendOTPEmail = async (email, otp, name) => {
       text: `Hello ${name}!\n\nYour verification code is: ${otp}\n\nThis code will expire in 10 minutes.\n\nIf you didn't create an account with us, please ignore this email.`
     };
     
-    const info = await transporter.sendMail(mailOptions);
-    
-    // For development with Ethereal
-    if (process.env.NODE_ENV === 'development' && !process.env.EMAIL_SERVICE) {
-      console.log('Preview URL: %s', nodemailer.getTestMessageUrl(info));
-    }
-    
     // If SendGrid is configured and available, use it (more reliable on hosted platforms)
     if (sgMail) {
       const msg = {
@@ -129,9 +122,18 @@ exports.sendOTPEmail = async (email, otp, name) => {
         html: mailOptions.html
       };
       const res = await sgMail.send(msg);
+      console.log('Email sent via SendGrid to', email);
       return { success: true, provider: 'sendgrid', result: res };
     }
 
+    const info = await transporter.sendMail(mailOptions);
+
+    // For development with Ethereal
+    if (process.env.NODE_ENV === 'development' && !process.env.EMAIL_SERVICE) {
+      console.log('Preview URL: %s', nodemailer.getTestMessageUrl(info));
+    }
+
+    console.log('Email sent via SMTP to', email);
     return { success: true, messageId: info.messageId };
   } catch (error) {
     console.error('Email sending failed:', error);

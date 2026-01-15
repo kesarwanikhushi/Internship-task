@@ -13,7 +13,9 @@ const app = express();
 // For a long-running service we want to connect to the DB before starting the server.
 // If the DB connection fails on startup we exit so the host (Render) can retry/deploy accordingly.
 
-const FRONTEND_URL = process.env.FRONTEND_URL || 'https://internshiptask-lilac.vercel.app';
+// Normalize FRONTEND_URL to avoid trailing-slash mismatch with browser origin
+const rawFrontEnd = process.env.FRONTEND_URL || 'https://internshiptask-lilac.vercel.app';
+const FRONTEND_URL = rawFrontEnd.replace(/\/$/, '');
 
 app.use(cors({
   origin: FRONTEND_URL,
