@@ -6,12 +6,19 @@ const createTransporter = () => {
   // This example uses Gmail - you need to enable "App Passwords" in your Google account
   
   if (process.env.EMAIL_SERVICE === 'gmail') {
+    // Use explicit SMTP settings for Gmail with sensible timeouts to avoid hanging
     return nodemailer.createTransport({
-      service: 'gmail',
+      host: process.env.EMAIL_HOST || 'smtp.gmail.com',
+      port: Number(process.env.EMAIL_PORT) || 465,
+      secure: (process.env.EMAIL_SECURE === 'true') || true,
       auth: {
         user: process.env.EMAIL_USER,
         pass: process.env.EMAIL_PASSWORD // Use App Password, not regular password
-      }
+      },
+      // Timeouts to prevent indefinite waiting
+      connectionTimeout: Number(process.env.EMAIL_CONNECTION_TIMEOUT) || 10000,
+      greetingTimeout: Number(process.env.EMAIL_GREETING_TIMEOUT) || 10000,
+      socketTimeout: Number(process.env.EMAIL_SOCKET_TIMEOUT) || 10000
     });
   }
   
@@ -19,11 +26,15 @@ const createTransporter = () => {
   // Emails won't be sent but you can view them at ethereal.email
   return nodemailer.createTransport({
     host: process.env.SMTP_HOST || 'smtp.ethereal.email',
-    port: process.env.SMTP_PORT || 587,
+    port: Number(process.env.SMTP_PORT) || 587,
+    secure: process.env.SMTP_SECURE === 'true' || false,
     auth: {
       user: process.env.SMTP_USER,
       pass: process.env.SMTP_PASS
-    }
+    },
+    connectionTimeout: Number(process.env.EMAIL_CONNECTION_TIMEOUT) || 10000,
+    greetingTimeout: Number(process.env.EMAIL_GREETING_TIMEOUT) || 10000,
+    socketTimeout: Number(process.env.EMAIL_SOCKET_TIMEOUT) || 10000
   });
 };
 

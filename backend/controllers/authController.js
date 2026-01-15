@@ -60,17 +60,13 @@ exports.register = async (req, res) => {
 
     await user.save();
 
-    // Send OTP email
-    try {
-      await sendOTPEmail(email, otp, name);
-    } catch (emailError) {
-      // If email fails, delete the user and return error
-      await User.deleteOne({ _id: user._id });
-      return res.status(500).json({ 
-        message: 'Failed to send verification email. Please try again.',
-        error: emailError.message 
+    // Send OTP email (non-blocking). We don't want a slow/failed SMTP to hang registration.
+    sendOTPEmail(email, otp, name)
+      .then(() => console.log('OTP email sent'))
+      .catch(async (emailError) => {
+        console.error('Email send failed (non-blocking):', emailError);
+        // Optionally: you could mark user for retry or notify admin.
       });
-    }
 
     res.status(201).json({
       message: 'Registration successful! Please check your email for the OTP.',
