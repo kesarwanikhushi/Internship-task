@@ -88,7 +88,7 @@ function Dashboard() {
       <nav className={`${isDark ? 'bg-slate-900 border-slate-700' : 'bg-white border-slate-300'} border-b h-16 sticky top-0 z-40`}>
         <div className="h-full max-w-7xl mx-auto px-8 flex items-center justify-between">
           <div className="flex items-center gap-4">
-            <div className={`w-8 h-8 ${isDark ? 'bg-white' : 'bg-slate-900'} rounded-lg`}></div>
+            {/* Logo removed */}
             <h1 className={`text-xl font-bold ${isDark ? 'text-white' : 'text-slate-900'}`}>Task Manager</h1>
           </div>
           <div className="flex items-center gap-3">
