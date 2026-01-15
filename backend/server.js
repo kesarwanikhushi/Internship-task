@@ -13,7 +13,27 @@ const app = express();
 // For a long-running service we want to connect to the DB before starting the server.
 // If the DB connection fails on startup we exit so the host (Render) can retry/deploy accordingly.
 
-app.use(cors());
+const FRONTEND_URL = process.env.FRONTEND_URL || 'https://internshiptask-lilac.vercel.app';
+
+app.use(cors({
+  origin: FRONTEND_URL,
+  credentials: true,
+  allowedHeaders: ['Content-Type', 'Authorization', 'Access-Control-Request-Private-Network'],
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS']
+}));
+
+// Allow Private Network Access preflight responses for browsers that request it
+app.options('*', (req, res) => {
+  res.header('Access-Control-Allow-Origin', FRONTEND_URL);
+  res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, Access-Control-Request-Private-Network');
+  res.header('Access-Control-Allow-Methods', 'GET,POST,PUT,DELETE,OPTIONS');
+  res.header('Access-Control-Allow-Credentials', 'true');
+  if (req.headers['access-control-request-private-network']) {
+    res.header('Access-Control-Allow-Private-Network', 'true');
+  }
+  return res.sendStatus(204);
+});
+
 app.use(express.json());
 
 // Health check endpoint
