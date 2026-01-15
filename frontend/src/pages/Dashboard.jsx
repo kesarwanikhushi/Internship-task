@@ -83,11 +83,7 @@ function Dashboard() {
 
   return (
     <div className={`min-h-screen ${isDark ? 'dark' : ''}`} style={{
-      background: isDark ? '#0f172a' : '#f1f5f9',
-      backgroundImage: isDark 
-        ? `linear-gradient(to right, #1e293b 1px, transparent 1px), linear-gradient(to bottom, #1e293b 1px, transparent 1px)`
-        : `linear-gradient(to right, #94a3b8 1px, transparent 1px), linear-gradient(to bottom, #94a3b8 1px, transparent 1px)`,
-      backgroundSize: '48px 48px'
+      background: isDark ? '#0f172a' : '#f1f5f9'
     }}>
       <nav className={`${isDark ? 'bg-slate-900 border-slate-700' : 'bg-white border-slate-300'} border-b h-16 sticky top-0 z-40`}>
         <div className="h-full max-w-7xl mx-auto px-8 flex items-center justify-between">
