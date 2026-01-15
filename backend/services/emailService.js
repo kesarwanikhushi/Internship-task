@@ -8,10 +8,19 @@ const createTransporter = () => {
   
   if (process.env.EMAIL_SERVICE === 'gmail') {
     // Use explicit SMTP settings for Gmail with sensible timeouts to avoid hanging
+    const port = Number(process.env.EMAIL_PORT) || 465;
+    const secure = (typeof process.env.EMAIL_SECURE !== 'undefined')
+      ? process.env.EMAIL_SECURE === 'true'
+      : port === 465;
+    const requireTLS = (typeof process.env.EMAIL_REQUIRE_TLS !== 'undefined')
+      ? process.env.EMAIL_REQUIRE_TLS === 'true'
+      : port === 587;
+
     return nodemailer.createTransport({
       host: process.env.EMAIL_HOST || 'smtp.gmail.com',
-      port: Number(process.env.EMAIL_PORT) || 465,
-      secure: (process.env.EMAIL_SECURE === 'true') || true,
+      port,
+      secure,
+      requireTLS,
       auth: {
         user: process.env.EMAIL_USER,
         pass: process.env.EMAIL_PASSWORD // Use App Password, not regular password
@@ -19,7 +28,11 @@ const createTransporter = () => {
       // Timeouts to prevent indefinite waiting
       connectionTimeout: Number(process.env.EMAIL_CONNECTION_TIMEOUT) || 10000,
       greetingTimeout: Number(process.env.EMAIL_GREETING_TIMEOUT) || 10000,
-      socketTimeout: Number(process.env.EMAIL_SOCKET_TIMEOUT) || 10000
+      socketTimeout: Number(process.env.EMAIL_SOCKET_TIMEOUT) || 10000,
+      tls: {
+        // allow self-signed certificates if explicitly disabled
+        rejectUnauthorized: process.env.EMAIL_TLS_REJECT_UNAUTHORIZED !== 'false'
+      }
     });
   }
   
