@@ -1,37 +1,147 @@
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
+const crypto = require('crypto');
 const User = require('../models/User');
 const { getJwtSecret } = require('../config/jwtSecret');
+const { sendOTPEmail } = require('../services/emailService');
 
+// Generate 6-digit OTP
+const generateOTP = () => {
+  return crypto.randomInt(100000, 999999).toString();
+};
+
+// Hash OTP for secure storage
+const hashOTP = (otp) => {
+  return crypto.createHash('sha256').update(otp).digest('hex');
+};
+
+// STEP 1: Register user and send OTP
 exports.register = async (req, res) => {
   try {
     const { name, email, password } = req.body;
 
+    // Validation
     if (!name || !email || !password) {
       return res.status(400).json({ message: 'All fields are required' });
     }
 
-    const existingUser = await User.findOne({ email });
-    if (existingUser) {
-      return res.status(400).json({ message: 'User already exists' });
+    if (password.length < 6) {
+      return res.status(400).json({ message: 'Password must be at least 6 characters' });
     }
 
+    // Check if user already exists
+    const existingUser = await User.findOne({ email });
+    if (existingUser) {
+      if (existingUser.isVerified) {
+        return res.status(400).json({ message: 'User already exists' });
+      } else {
+        // User registered but not verified - allow re-registration
+        await User.deleteOne({ email });
+      }
+    }
+
+    // Hash password
     const hashedPassword = await bcrypt.hash(password, 10);
 
+    // Generate OTP
+    const otp = generateOTP();
+    const hashedOTP = hashOTP(otp);
+    const otpExpiresAt = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
+
+    // Create user (unverified)
     const user = new User({
       name,
       email,
-      password: hashedPassword
+      password: hashedPassword,
+      isVerified: false,
+      otp: hashedOTP,
+      otpExpiresAt
     });
 
     await user.save();
 
-    const token = jwt.sign({ userId: user._id }, getJwtSecret(), {
+    // Send OTP email
+    try {
+      await sendOTPEmail(email, otp, name);
+    } catch (emailError) {
+      // If email fails, delete the user and return error
+      await User.deleteOne({ _id: user._id });
+      return res.status(500).json({ 
+        message: 'Failed to send verification email. Please try again.',
+        error: emailError.message 
+      });
+    }
+
+    res.status(201).json({
+      message: 'Registration successful! Please check your email for the OTP.',
+      email: email,
+      userId: user._id
+    });
+  } catch (error) {
+    console.error('Registration error:', error);
+    res.status(500).json({ message: error.message });
+  }
+};
+
+// STEP 2: Verify OTP
+exports.verifyOTP = async (req, res) => {
+  try {
+    const { email, otp } = req.body;
+
+    if (!email || !otp) {
+      return res.status(400).json({ message: 'Email and OTP are required' });
+    }
+
+    // Find user with OTP fields
+    const user = await User.findOne({ email }).select('+otp +otpExpiresAt');
+    
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+
+    if (user.isVerified) {
+      return res.status(400).json({ message: 'Email already verified' });
+    }
+
+    // Check if OTP exists
+    if (!user.otp || !user.otpExpiresAt) {
+      return res.status(400).json({ message: 'No OTP found. Please register again.' });
+    }
+
+    // Check if OTP expired
+    if (user.otpExpiresAt < new Date()) {
+      return res.status(400).json({ message: 'OTP expired. Please request a new one.' });
+    }
+
+    // Verify OTP
+    const hashedOTP = hashOTP(otp);
+    if (user.otp !== hashedOTP) {
+      return res.status(400).json({ message: 'Invalid OTP' });
+    }
+
+    // Mark user as verified and clear OTP
+    user.isVerified = true;
+    user.otp = undefined;
+    user.otpExpiresAt = undefined;
+    await user.save();
+
+    // Generate tokens
+    const accessToken = jwt.sign({ userId: user._id }, getJwtSecret(), {
+      expiresIn: '15m'
+    });
+
+    const refreshToken = jwt.sign({ userId: user._id }, getJwtSecret(), {
       expiresIn: '7d'
     });
 
-    res.status(201).json({
-      token,
+    // Store refresh token
+    user.refreshToken = refreshToken;
+    await user.save();
+
+    res.json({
+      message: 'Email verified successfully!',
+      accessToken,
+      refreshToken,
       user: {
         id: user._id,
         name: user.name,
@@ -39,6 +149,45 @@ exports.register = async (req, res) => {
       }
     });
   } catch (error) {
+    console.error('OTP verification error:', error);
+    res.status(500).json({ message: error.message });
+  }
+};
+
+// Resend OTP
+exports.resendOTP = async (req, res) => {
+  try {
+    const { email } = req.body;
+
+    if (!email) {
+      return res.status(400).json({ message: 'Email is required' });
+    }
+
+    const user = await User.findOne({ email });
+    
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+
+    if (user.isVerified) {
+      return res.status(400).json({ message: 'Email already verified' });
+    }
+
+    // Generate new OTP
+    const otp = generateOTP();
+    const hashedOTP = hashOTP(otp);
+    const otpExpiresAt = new Date(Date.now() + 10 * 60 * 1000);
+
+    user.otp = hashedOTP;
+    user.otpExpiresAt = otpExpiresAt;
+    await user.save();
+
+    // Send OTP email
+    await sendOTPEmail(email, otp, user.name);
+
+    res.json({ message: 'OTP resent successfully!' });
+  } catch (error) {
+    console.error('Resend OTP error:', error);
     res.status(500).json({ message: error.message });
   }
 };
@@ -56,17 +205,36 @@ exports.login = async (req, res) => {
       return res.status(401).json({ message: 'Invalid credentials' });
     }
 
+    // Check if email is verified
+    if (!user.isVerified) {
+      return res.status(403).json({ 
+        message: 'Please verify your email before logging in',
+        requiresVerification: true 
+      });
+    }
+
     const isPasswordValid = await bcrypt.compare(password, user.password);
     if (!isPasswordValid) {
       return res.status(401).json({ message: 'Invalid credentials' });
     }
 
-    const token = jwt.sign({ userId: user._id }, getJwtSecret(), {
+    // Generate access token (short-lived)
+    const accessToken = jwt.sign({ userId: user._id }, getJwtSecret(), {
+      expiresIn: '15m'
+    });
+
+    // Generate refresh token (long-lived)
+    const refreshToken = jwt.sign({ userId: user._id }, getJwtSecret(), {
       expiresIn: '7d'
     });
 
+    // Store refresh token in database
+    user.refreshToken = refreshToken;
+    await user.save();
+
     res.json({
-      token,
+      accessToken,
+      refreshToken,
       user: {
         id: user._id,
         name: user.name,
@@ -74,6 +242,58 @@ exports.login = async (req, res) => {
       }
     });
   } catch (error) {
+    console.error('Login error:', error);
+    res.status(500).json({ message: error.message });
+  }
+};
+
+// Refresh access token
+exports.refreshToken = async (req, res) => {
+  try {
+    const { refreshToken } = req.body;
+
+    if (!refreshToken) {
+      return res.status(400).json({ message: 'Refresh token is required' });
+    }
+
+    // Verify refresh token
+    let decoded;
+    try {
+      decoded = jwt.verify(refreshToken, getJwtSecret());
+    } catch (error) {
+      return res.status(401).json({ message: 'Invalid or expired refresh token' });
+    }
+
+    // Find user and verify stored refresh token
+    const user = await User.findById(decoded.userId).select('+refreshToken');
+    
+    if (!user || user.refreshToken !== refreshToken) {
+      return res.status(401).json({ message: 'Invalid refresh token' });
+    }
+
+    // Generate new access token
+    const accessToken = jwt.sign({ userId: user._id }, getJwtSecret(), {
+      expiresIn: '15m'
+    });
+
+    res.json({ accessToken });
+  } catch (error) {
+    console.error('Refresh token error:', error);
+    res.status(500).json({ message: error.message });
+  }
+};
+
+// Logout
+exports.logout = async (req, res) => {
+  try {
+    const userId = req.userId; // From auth middleware
+
+    // Clear refresh token from database
+    await User.findByIdAndUpdate(userId, { refreshToken: null });
+
+    res.json({ message: 'Logged out successfully' });
+  } catch (error) {
+    console.error('Logout error:', error);
     res.status(500).json({ message: error.message });
   }
 };

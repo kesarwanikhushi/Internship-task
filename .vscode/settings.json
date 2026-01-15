@@ -1,0 +1,12 @@
+{
+  "chat.tools.terminal.autoApprove": {
+    "/^cd \"c:\\\\Users\\\\kesar\\\\OneDrive\\\\Desktop\\\\extra\\\\Web Dev\\\\internship task\\\\backend\"; npm install validator nodemailer crypto$/": {
+      "approve": true,
+      "matchCommandLine": true
+    },
+    "/^cd \"c:\\\\Users\\\\kesar\\\\OneDrive\\\\Desktop\\\\extra\\\\Web Dev\\\\internship task\\\\backend\"; npm install --save-dev eslint prettier eslint-config-prettier eslint-plugin-prettier$/": {
+      "approve": true,
+      "matchCommandLine": true
+    }
+  }
+}
