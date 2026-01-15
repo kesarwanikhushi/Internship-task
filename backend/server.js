@@ -10,12 +10,8 @@ dotenv.config();
 
 const app = express();
 
-// Attempt to connect to the database. On serverless platforms we log errors
-// instead of exiting the process so the function can return an error response
-// and logs are preserved.
-connectDB().catch((err) => {
-  console.error('Initial MongoDB connection failed:', err.message);
-});
+// For a long-running service we want to connect to the DB before starting the server.
+// If the DB connection fails on startup we exit so the host (Render) can retry/deploy accordingly.
 
 app.use(cors());
 app.use(express.json());
@@ -41,19 +37,34 @@ app.use((err, req, res, next) => {
 
 const PORT = process.env.PORT || 5000;
 
-if (require.main === module) {
-  const server = app.listen(PORT, () => {
-    console.log(`Server running on port ${PORT}`);
-  });
+const startServer = async () => {
+  try {
+    // Connect to database first
+    await connectDB({ attempts: 5, delayMs: 3000, serverSelectionTimeoutMS: 30000 });
+    
+    // Only start the server after DB connection succeeds
+    if (require.main === module) {
+      const server = app.listen(PORT, () => {
+        console.log(`Server running on port ${PORT}`);
+      });
 
-  server.on('error', (err) => {
-    if (err && err.code === 'EADDRINUSE') {
-      console.error(`Port ${PORT} is already in use. Kill the process using it or set a different PORT.`);
-    } else {
-      console.error('Server error:', err);
+      server.on('error', (err) => {
+        if (err && err.code === 'EADDRINUSE') {
+          console.error(`Port ${PORT} is already in use. Kill the process using it or set a different PORT.`);
+        } else {
+          console.error('Server error:', err);
+        }
+        process.exit(1);
+      });
     }
+  } catch (err) {
+    console.error('Initial MongoDB connection failed, exiting process:', err.message);
     process.exit(1);
-  });
+  }
+};
+
+if (require.main === module) {
+  startServer();
 }
 
 module.exports = app;
