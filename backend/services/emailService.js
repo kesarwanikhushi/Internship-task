@@ -4,6 +4,37 @@ const nodemailer = require('nodemailer');
 let sgMail;
 let resendClient;
 
+// Initialize email services at module level
+const initializeEmailServices = () => {
+  // Priority 1: Try Resend
+  if (process.env.RESEND_API_KEY && !resendClient) {
+    try {
+      const { Resend } = require('resend');
+      resendClient = new Resend(process.env.RESEND_API_KEY);
+      console.log('✅ Resend initialized successfully');
+      console.log('RESEND_API_KEY starts with:', process.env.RESEND_API_KEY.substring(0, 5));
+    } catch (e) {
+      console.error('❌ Resend initialization failed:', e.message);
+      resendClient = null;
+    }
+  }
+  
+  // Priority 2: Try SendGrid
+  if (!resendClient && process.env.SENDGRID_API_KEY && !sgMail) {
+    try {
+      sgMail = require('@sendgrid/mail');
+      sgMail.setApiKey(process.env.SENDGRID_API_KEY);
+      console.log('✅ SendGrid initialized successfully');
+    } catch (e) {
+      console.error('❌ SendGrid initialization failed:', e.message);
+      sgMail = null;
+    }
+  }
+};
+
+// Initialize on module load
+initializeEmailServices();
+
 const createTransporter = () => {
   // For production, use Gmail SMTP with App Password
   if (process.env.EMAIL_SERVICE === 'gmail' && process.env.EMAIL_USER && process.env.EMAIL_PASSWORD) {
@@ -51,33 +82,13 @@ const createTransporter = () => {
 
 // Send OTP email
 exports.sendOTPEmail = async (email, otp, name) => {
-  // Priority 1: Try Resend (most reliable for cloud platforms)
-  if (process.env.RESEND_API_KEY) {
-    try {
-      const { Resend } = require('resend');
-      resendClient = new Resend(process.env.RESEND_API_KEY);
-      console.log('===== EMAIL SERVICE CONFIGURATION =====');
-      console.log('Using Resend API for email service');
-      console.log('========================================');
-    } catch (e) {
-      console.warn('Resend package not installed; falling back to other services');
-      resendClient = null;
-    }
-  }
-  
-  // Priority 2: Try SendGrid
-  if (!resendClient && process.env.SENDGRID_API_KEY) {
-    try {
-      sgMail = require('@sendgrid/mail');
-      sgMail.setApiKey(process.env.SENDGRID_API_KEY);
-      console.log('===== EMAIL SERVICE CONFIGURATION =====');
-      console.log('Using SendGrid API for email service');
-      console.log('========================================');
-    } catch (e) {
-      console.warn('SendGrid package not installed; falling back to SMTP');
-      sgMail = null;
-    }
-  }
+  console.log('===== SENDING OTP EMAIL =====');
+  console.log('To:', email);
+  console.log('Resend available:', !!resendClient);
+  console.log('SendGrid available:', !!sgMail);
+  console.log('RESEND_API_KEY set:', !!process.env.RESEND_API_KEY);
+  console.log('SENDGRID_API_KEY set:', !!process.env.SENDGRID_API_KEY);
+  console.log('=============================');
   
   try {
     const transporter = createTransporter();
@@ -130,30 +141,46 @@ exports.sendOTPEmail = async (email, otp, name) => {
     
     // Priority 1: Use Resend if available
     if (resendClient) {
-      const result = await resendClient.emails.send({
-        from: process.env.EMAIL_FROM || 'onboarding@resend.dev',
-        to: email,
-        subject: mailOptions.subject,
-        html: mailOptions.html
-      });
-      console.log('Email sent via Resend to', email);
-      return { success: true, provider: 'resend', result };
+      console.log('\u2705 Using Resend to send email...');
+      try {
+        const result = await resendClient.emails.send({
+          from: process.env.EMAIL_FROM || 'onboarding@resend.dev',
+          to: email,
+          subject: mailOptions.subject,
+          html: mailOptions.html
+        });
+        console.log('\u2705 Email sent via Resend to', email);
+        console.log('Resend response:', JSON.stringify(result, null, 2));
+        return { success: true, provider: 'resend', result };
+      } catch (resendError) {
+        console.error('\u274c Resend send failed:', resendError.message);
+        console.error('Resend error details:', JSON.stringify(resendError, null, 2));
+        throw resendError;
+      }
     }
     
     // Priority 2: Use SendGrid if available
     if (sgMail) {
-      const msg = {
-        to: email,
-        from: process.env.EMAIL_FROM || 'noreply@taskmanager.com',
-        subject: mailOptions.subject,
-        text: mailOptions.text,
-        html: mailOptions.html
-      };
-      const res = await sgMail.send(msg);
-      console.log('Email sent via SendGrid to', email);
-      return { success: true, provider: 'sendgrid', result: res };
+      console.log('\u2705 Using SendGrid to send email...');
+      try {
+        const msg = {
+          to: email,
+          from: process.env.EMAIL_FROM || 'noreply@taskmanager.com',
+          subject: mailOptions.subject,
+          text: mailOptions.text,
+          html: mailOptions.html
+        };
+        const res = await sgMail.send(msg);
+        console.log('\u2705 Email sent via SendGrid to', email);
+        return { success: true, provider: 'sendgrid', result: res };
+      } catch (sgError) {
+        console.error('\u274c SendGrid send failed:', sgError.message);
+        throw sgError;
+      }
     }
 
+    // Priority 3: Fall back to SMTP
+    console.log('\u26a0\ufe0f No API-based email service available, using SMTP...');
     const info = await transporter.sendMail(mailOptions);
 
     // For development with Ethereal
@@ -181,25 +208,6 @@ exports.sendOTPEmail = async (email, otp, name) => {
 
 // Send password reset email (for future use)
 exports.sendPasswordResetEmail = async (email, resetToken, name) => {
-  // Initialize email services (same priority as sendOTPEmail)
-  if (process.env.RESEND_API_KEY && !resendClient) {
-    try {
-      const { Resend } = require('resend');
-      resendClient = new Resend(process.env.RESEND_API_KEY);
-    } catch (e) {
-      resendClient = null;
-    }
-  }
-  
-  if (!resendClient && process.env.SENDGRID_API_KEY && !sgMail) {
-    try {
-      sgMail = require('@sendgrid/mail');
-      sgMail.setApiKey(process.env.SENDGRID_API_KEY);
-    } catch (e) {
-      sgMail = null;
-    }
-  }
-  
   try {
     const transporter = createTransporter();
     const resetURL = `${process.env.FRONTEND_URL}/reset-password?token=${resetToken}`;
