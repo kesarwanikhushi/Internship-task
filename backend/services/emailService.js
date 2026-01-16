@@ -11,12 +11,21 @@ const initializeEmailServices = () => {
   if (process.env.BREVO_API_KEY && !brevoClient) {
     try {
       const brevo = require('@getbrevo/brevo');
-      brevoClient = new brevo.TransactionalEmailsApi();
-      brevoClient.setApiKey(brevo.TransactionalEmailsApiApiKeys.apiKey, process.env.BREVO_API_KEY);
+      const apiInstance = new brevo.TransactionalEmailsApi();
+      
+      // Set API key correctly
+      apiInstance.setApiKey(
+        brevo.TransactionalEmailsApiApiKeys.apiKey,
+        process.env.BREVO_API_KEY
+      );
+      
+      brevoClient = apiInstance;
       console.log('✅ Brevo initialized successfully');
       console.log('BREVO_API_KEY starts with:', process.env.BREVO_API_KEY.substring(0, 10));
+      console.log('Brevo client type:', typeof brevoClient);
     } catch (e) {
       console.error('❌ Brevo initialization failed:', e.message);
+      console.error('Full error:', e);
       brevoClient = null;
     }
   }
@@ -99,7 +108,8 @@ const createTransporter = () => {
 exports.sendOTPEmail = async (email, otp, name) => {
   console.log('===== SENDING OTP EMAIL =====');
   console.log('To:', email);
-  console.log('Brevo available:', !!brevoClient);
+  console.log('Brevo client exists:', !!brevoClient);
+  console.log('Brevo client type:', typeof brevoClient);
   console.log('Resend available:', !!resendClient);
   console.log('SendGrid available:', !!sgMail);
   console.log('BREVO_API_KEY set:', !!process.env.BREVO_API_KEY);
