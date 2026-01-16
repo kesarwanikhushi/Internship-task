@@ -7,27 +7,31 @@ node_modules/
 .env.production
 .env.*.local
 
-# Build outputs
-dist/
-build/
-
 # IDE & Editor files
 .vscode/
 .idea/
 *.swp
 *.swo
 *~
+.DS_Store
 
 # OS files
-.DS_Store
 Thumbs.db
 
 # Logs
 *.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Build outputs
+dist/
+build/
+coverage/
 
 # Deployment
 .vercel/
 
 # Temporary files
-.cache/
 *.tmp
+.cache/

@@ -62,9 +62,15 @@ exports.register = async (req, res) => {
 
     // Send OTP email (non-blocking). We don't want a slow/failed SMTP to hang registration.
     sendOTPEmail(email, otp, name)
-      .then(() => console.log('OTP email sent successfully'))
+      .then(() => console.log('✅ OTP email sent successfully to:', email))
       .catch(async (emailError) => {
-        console.error('Email send failed (non-blocking):', emailError);
+        console.error('❌ Email send failed (non-blocking)');
+        console.error('Error message:', emailError.message);
+        console.error('Error code:', emailError.code);
+        console.error('Error name:', emailError.name);
+        if (emailError.response) {
+          console.error('SMTP Response:', emailError.response);
+        }
         // Note: We still return success to user since account was created
       });
 

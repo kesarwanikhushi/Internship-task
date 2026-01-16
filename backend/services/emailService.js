@@ -6,7 +6,13 @@ let sgMail;
 const createTransporter = () => {
   // For production, use Gmail SMTP with App Password
   if (process.env.EMAIL_SERVICE === 'gmail' && process.env.EMAIL_USER && process.env.EMAIL_PASSWORD) {
+    console.log('===== EMAIL SERVICE CONFIGURATION =====');
     console.log('Using Gmail SMTP for email service');
+    console.log('EMAIL_SERVICE:', process.env.EMAIL_SERVICE);
+    console.log('EMAIL_USER:', process.env.EMAIL_USER);
+    console.log('EMAIL_PASSWORD length:', process.env.EMAIL_PASSWORD?.length, 'chars');
+    console.log('EMAIL_FROM:', process.env.EMAIL_FROM);
+    console.log('========================================');
     
     return nodemailer.createTransport({
       service: 'gmail',
@@ -25,7 +31,12 @@ const createTransporter = () => {
   }
   
   // Fallback for development/testing
-  console.warn('Email service not properly configured. Emails will not be sent.');
+  console.warn('===== EMAIL SERVICE NOT CONFIGURED =====');
+  console.warn('EMAIL_SERVICE:', process.env.EMAIL_SERVICE || 'NOT SET');
+  console.warn('EMAIL_USER:', process.env.EMAIL_USER ? 'SET' : 'NOT SET');
+  console.warn('EMAIL_PASSWORD:', process.env.EMAIL_PASSWORD ? 'SET' : 'NOT SET');
+  console.warn('Falling back to Ethereal (test email only)');
+  console.warn('=========================================');
   return nodemailer.createTransport({
     host: 'smtp.ethereal.email',
     port: 587,
@@ -121,8 +132,18 @@ exports.sendOTPEmail = async (email, otp, name) => {
     console.log('Email sent via SMTP to', email);
     return { success: true, messageId: info.messageId };
   } catch (error) {
-    console.error('Email sending failed:', error);
-    throw new Error('Failed to send verification email');
+    console.error('====== EMAIL SENDING FAILED ======');
+    console.error('Error Name:', error.name);
+    console.error('Error Message:', error.message);
+    console.error('Error Code:', error.code);
+    console.error('Error Command:', error.command);
+    console.error('Error Response:', error.response);
+    console.error('Error ResponseCode:', error.responseCode);
+    console.error('Full Error Object:', JSON.stringify(error, Object.getOwnPropertyNames(error), 2));
+    console.error('===================================');
+    
+    // Re-throw with the actual error message for better debugging
+    throw error;
   }
 };
 
