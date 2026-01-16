@@ -5,6 +5,7 @@ const { sendOTPEmail } = require('../services/emailService');
 const testEmail = async () => {
   console.log('\n====== TESTING EMAIL SERVICE ======');
   console.log('Environment Variables:');
+  console.log('BREVO_API_KEY:', process.env.BREVO_API_KEY ? `SET (${process.env.BREVO_API_KEY.substring(0, 10)}...)` : 'NOT SET');
   console.log('RESEND_API_KEY:', process.env.RESEND_API_KEY ? `SET (${process.env.RESEND_API_KEY.substring(0, 8)}...)` : 'NOT SET');
   console.log('SENDGRID_API_KEY:', process.env.SENDGRID_API_KEY ? 'SET' : 'NOT SET');
   console.log('EMAIL_SERVICE:', process.env.EMAIL_SERVICE || 'NOT SET');

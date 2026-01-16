@@ -3,11 +3,26 @@ const nodemailer = require('nodemailer');
 // Email service clients
 let sgMail;
 let resendClient;
+let brevoClient;
 
 // Initialize email services at module level
 const initializeEmailServices = () => {
-  // Priority 1: Try Resend
-  if (process.env.RESEND_API_KEY && !resendClient) {
+  // Priority 1: Try Brevo (300 emails/day, no domain verification needed)
+  if (process.env.BREVO_API_KEY && !brevoClient) {
+    try {
+      const brevo = require('@getbrevo/brevo');
+      brevoClient = new brevo.TransactionalEmailsApi();
+      brevoClient.setApiKey(brevo.TransactionalEmailsApiApiKeys.apiKey, process.env.BREVO_API_KEY);
+      console.log('✅ Brevo initialized successfully');
+      console.log('BREVO_API_KEY starts with:', process.env.BREVO_API_KEY.substring(0, 10));
+    } catch (e) {
+      console.error('❌ Brevo initialization failed:', e.message);
+      brevoClient = null;
+    }
+  }
+  
+  // Priority 2: Try Resend
+  if (!brevoClient && process.env.RESEND_API_KEY && !resendClient) {
     try {
       const { Resend } = require('resend');
       resendClient = new Resend(process.env.RESEND_API_KEY);
@@ -19,8 +34,8 @@ const initializeEmailServices = () => {
     }
   }
   
-  // Priority 2: Try SendGrid
-  if (!resendClient && process.env.SENDGRID_API_KEY && !sgMail) {
+  // Priority 3: Try SendGrid
+  if (!brevoClient && !resendClient && process.env.SENDGRID_API_KEY && !sgMail) {
     try {
       sgMail = require('@sendgrid/mail');
       sgMail.setApiKey(process.env.SENDGRID_API_KEY);
@@ -84,8 +99,10 @@ const createTransporter = () => {
 exports.sendOTPEmail = async (email, otp, name) => {
   console.log('===== SENDING OTP EMAIL =====');
   console.log('To:', email);
+  console.log('Brevo available:', !!brevoClient);
   console.log('Resend available:', !!resendClient);
   console.log('SendGrid available:', !!sgMail);
+  console.log('BREVO_API_KEY set:', !!process.env.BREVO_API_KEY);
   console.log('RESEND_API_KEY set:', !!process.env.RESEND_API_KEY);
   console.log('SENDGRID_API_KEY set:', !!process.env.SENDGRID_API_KEY);
   console.log('=============================');
@@ -139,7 +156,32 @@ exports.sendOTPEmail = async (email, otp, name) => {
       text: `Hello ${name}!\n\nYour verification code is: ${otp}\n\nThis code will expire in 10 minutes.\n\nIf you didn't create an account with us, please ignore this email.`
     };
     
-    // Priority 1: Use Resend if available
+    // Priority 1: Use Brevo if available (best for free tier - 300 emails/day, any recipient)
+    if (brevoClient) {
+      console.log('✅ Using Brevo to send email...');
+      try {
+        const brevo = require('@getbrevo/brevo');
+        const sendSmtpEmail = new brevo.SendSmtpEmail();
+        sendSmtpEmail.subject = mailOptions.subject;
+        sendSmtpEmail.htmlContent = mailOptions.html;
+        sendSmtpEmail.sender = { 
+          name: 'Task Manager', 
+          email: process.env.EMAIL_FROM || 'noreply@taskmanager.com' 
+        };
+        sendSmtpEmail.to = [{ email: email, name: name }];
+        
+        const result = await brevoClient.sendTransacEmail(sendSmtpEmail);
+        console.log('✅ Email sent via Brevo to', email);
+        console.log('Brevo message ID:', result.response?.body?.messageId);
+        return { success: true, provider: 'brevo', result: result.response?.body };
+      } catch (brevoError) {
+        console.error('❌ Brevo send failed:', brevoError.message);
+        console.error('Brevo error details:', JSON.stringify(brevoError.response?.body || brevoError, null, 2));
+        throw brevoError;
+      }
+    }
+    
+    // Priority 2: Use Resend if available
     if (resendClient) {
       console.log('\u2705 Using Resend to send email...');
       try {
