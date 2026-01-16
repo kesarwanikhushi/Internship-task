@@ -1,7 +1,8 @@
 const nodemailer = require('nodemailer');
 
-// Create transporter
+// Email service clients
 let sgMail;
+let resendClient;
 
 const createTransporter = () => {
   // For production, use Gmail SMTP with App Password
@@ -50,15 +51,34 @@ const createTransporter = () => {
 
 // Send OTP email
 exports.sendOTPEmail = async (email, otp, name) => {
-  if (process.env.SENDGRID_API_KEY) {
+  // Priority 1: Try Resend (most reliable for cloud platforms)
+  if (process.env.RESEND_API_KEY) {
+    try {
+      const { Resend } = require('resend');
+      resendClient = new Resend(process.env.RESEND_API_KEY);
+      console.log('===== EMAIL SERVICE CONFIGURATION =====');
+      console.log('Using Resend API for email service');
+      console.log('========================================');
+    } catch (e) {
+      console.warn('Resend package not installed; falling back to other services');
+      resendClient = null;
+    }
+  }
+  
+  // Priority 2: Try SendGrid
+  if (!resendClient && process.env.SENDGRID_API_KEY) {
     try {
       sgMail = require('@sendgrid/mail');
       sgMail.setApiKey(process.env.SENDGRID_API_KEY);
+      console.log('===== EMAIL SERVICE CONFIGURATION =====');
+      console.log('Using SendGrid API for email service');
+      console.log('========================================');
     } catch (e) {
       console.warn('SendGrid package not installed; falling back to SMTP');
       sgMail = null;
     }
   }
+  
   try {
     const transporter = createTransporter();
     
@@ -108,7 +128,19 @@ exports.sendOTPEmail = async (email, otp, name) => {
       text: `Hello ${name}!\n\nYour verification code is: ${otp}\n\nThis code will expire in 10 minutes.\n\nIf you didn't create an account with us, please ignore this email.`
     };
     
-    // If SendGrid is configured and available, use it (more reliable on hosted platforms)
+    // Priority 1: Use Resend if available
+    if (resendClient) {
+      const result = await resendClient.emails.send({
+        from: process.env.EMAIL_FROM || 'onboarding@resend.dev',
+        to: email,
+        subject: mailOptions.subject,
+        html: mailOptions.html
+      });
+      console.log('Email sent via Resend to', email);
+      return { success: true, provider: 'resend', result };
+    }
+    
+    // Priority 2: Use SendGrid if available
     if (sgMail) {
       const msg = {
         to: email,
@@ -149,12 +181,31 @@ exports.sendOTPEmail = async (email, otp, name) => {
 
 // Send password reset email (for future use)
 exports.sendPasswordResetEmail = async (email, resetToken, name) => {
+  // Initialize email services (same priority as sendOTPEmail)
+  if (process.env.RESEND_API_KEY && !resendClient) {
+    try {
+      const { Resend } = require('resend');
+      resendClient = new Resend(process.env.RESEND_API_KEY);
+    } catch (e) {
+      resendClient = null;
+    }
+  }
+  
+  if (!resendClient && process.env.SENDGRID_API_KEY && !sgMail) {
+    try {
+      sgMail = require('@sendgrid/mail');
+      sgMail.setApiKey(process.env.SENDGRID_API_KEY);
+    } catch (e) {
+      sgMail = null;
+    }
+  }
+  
   try {
     const transporter = createTransporter();
     const resetURL = `${process.env.FRONTEND_URL}/reset-password?token=${resetToken}`;
     
     const mailOptions = {
-      from: process.env.EMAIL_FROM || '"Task Manager" <noreply@taskmanager.com>',
+      from: process.env.EMAIL_FROM || 'onboarding@resend.dev',
       to: email,
       subject: 'Password Reset Request - Task Manager',
       html: `
@@ -167,6 +218,18 @@ exports.sendPasswordResetEmail = async (email, resetToken, name) => {
       text: `Hello ${name}!\n\nYou requested to reset your password. Use this link: ${resetURL}\n\nThis link will expire in 1 hour.`
     };
     
+    // Priority 1: Use Resend
+    if (resendClient) {
+      const result = await resendClient.emails.send({
+        from: mailOptions.from,
+        to: email,
+        subject: mailOptions.subject,
+        html: mailOptions.html
+      });
+      return { success: true, provider: 'resend', result };
+    }
+    
+    // Priority 2: Use SendGrid
     if (sgMail) {
       const msg = {
         to: email,
